@@ -1,0 +1,17 @@
+# Секреты — никогда не коммитим
+.env
+
+# Зависимости — устанавливаются через composer install
+/vendor/
+
+# Рантайм / логи
+/var/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
