@@ -14,25 +14,45 @@ final class AvitoErrorAdsRepository
      */
     public function saveMany(int $reportId, array $items): int
     {
-        $saved = 0;
+        $existing = $this->conn->fetchFirstColumn(
+            'SELECT ad_external_id FROM avito_error_ads WHERE report_id = ?',
+            [$reportId]
+        );
+        $existingSet = array_flip($existing);
 
+        $toInsert = [];
         foreach ($items as $item) {
-            $rxGoodItems = (int) explode('-', $item['ad_external_id'])[0];
-
-            $this->conn->executeStatement(
-                'INSERT INTO avito_error_ads
-                   (report_id, ad_external_id, error_type, fetched_at, status, rx_good_items)
-                 VALUES (?, ?, ?, NOW(), \'NEW\', ?)
-                 ON DUPLICATE KEY UPDATE
-                   report_id     = VALUES(report_id),
-                   error_type    = VALUES(error_type),
-                   fetched_at    = VALUES(fetched_at),
-                   rx_good_items = VALUES(rx_good_items)',
-                [$reportId, $item['ad_external_id'], $item['error_type'], $rxGoodItems]
-            );
-            $saved++;
+            if (isset($existingSet[$item['ad_external_id']])) {
+                continue;
+            }
+            $toInsert[] = [
+                'report_id'      => $reportId,
+                'ad_external_id' => $item['ad_external_id'],
+                'error_type'     => $item['error_type'],
+                'rx_good_items'  => (int) explode('-', $item['ad_external_id'])[0],
+            ];
         }
 
-        return $saved;
+        if ($toInsert === []) {
+            return 0;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($toInsert), '(?, ?, ?, NOW(), \'NEW\', ?)'));
+        $params = [];
+        foreach ($toInsert as $row) {
+            $params[] = $row['report_id'];
+            $params[] = $row['ad_external_id'];
+            $params[] = $row['error_type'];
+            $params[] = $row['rx_good_items'];
+        }
+
+        $this->conn->executeStatement(
+            "INSERT INTO avito_error_ads
+               (report_id, ad_external_id, error_type, fetched_at, status, rx_good_items)
+             VALUES {$placeholders}",
+            $params
+        );
+
+        return count($toInsert);
     }
 }
