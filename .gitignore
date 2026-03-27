@@ -7,6 +7,9 @@
 # Рантайм / логи
 /var/
 
+# PHPUnit
+.phpunit.result.cache
+
 # IDE
 .idea/
 .vscode/

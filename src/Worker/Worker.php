@@ -142,7 +142,11 @@ final class Worker
                     }
 
                     $errorItems = array_map(
-                        static fn(ErrorAd $e) => ['ad_external_id' => $e->adExternalId, 'error_type' => $e->errorType],
+                        static fn(ErrorAd $e) => [
+                            'ad_external_id' => $e->adExternalId,
+                            'error_type'     => $e->errorType,
+                            'rx_good_items'  => $e->rxGoodItems,
+                        ],
                         $errorAds,
                     );
 

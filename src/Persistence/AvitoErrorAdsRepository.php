@@ -14,6 +14,10 @@ final class AvitoErrorAdsRepository
      */
     public function saveMany(int $reportId, array $items): int
     {
+        if ($items === []) {
+            return 0;
+        }
+
         $existing = $this->conn->fetchFirstColumn(
             'SELECT ad_external_id FROM avito_error_ads WHERE report_id = ?',
             [$reportId]
@@ -22,16 +26,19 @@ final class AvitoErrorAdsRepository
 
         $toInsert = [];
         foreach ($items as $item) {
-            if (isset($existingSet[$item['ad_external_id']])) {
+            $adId = $item['ad_external_id'];
+            if (isset($existingSet[$adId]) || isset($toInsert[$adId])) {
                 continue;
             }
-            $toInsert[] = [
+            $toInsert[$adId] = [
                 'report_id'      => $reportId,
-                'ad_external_id' => $item['ad_external_id'],
+                'ad_external_id' => $adId,
                 'error_type'     => $item['error_type'],
-                'rx_good_items'  => (int) explode('-', $item['ad_external_id'])[0],
+                'rx_good_items'  => $item['rx_good_items'],
             ];
         }
+
+        $toInsert = array_values($toInsert);
 
         if ($toInsert === []) {
             return 0;
