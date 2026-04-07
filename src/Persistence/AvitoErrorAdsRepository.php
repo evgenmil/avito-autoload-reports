@@ -18,9 +18,21 @@ final class AvitoErrorAdsRepository
             return 0;
         }
 
+        $uniqueAdIds = [];
+        $seenInBatch = [];
+        foreach ($items as $item) {
+            $adId = $item['ad_external_id'];
+            if (isset($seenInBatch[$adId])) {
+                continue;
+            }
+            $seenInBatch[$adId] = true;
+            $uniqueAdIds[] = $adId;
+        }
+
+        $inPlaceholders = implode(', ', array_fill(0, count($uniqueAdIds), '?'));
         $existing = $this->conn->fetchFirstColumn(
-            'SELECT ad_external_id FROM avito_error_ads WHERE report_id = ?',
-            [$reportId]
+            "SELECT ad_external_id FROM avito_error_ads WHERE ad_external_id IN ({$inPlaceholders})",
+            $uniqueAdIds
         );
         $existingSet = array_flip($existing);
 
