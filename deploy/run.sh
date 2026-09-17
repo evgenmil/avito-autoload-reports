@@ -15,13 +15,23 @@ CONTAINER_NAME="avito-autoload-reports-worker"
 ENV_FILE="/opt/avito-autoload-reports/.env"
 LOG_DIR="/opt/avito-autoload-reports/logs"
 
-# Контроль одного экземпляра: если воркер ещё выполняется — пропускаем запуск.
+# Контроль одного экземпляра: живой прогон пропускаем,
+# зависший (>50 мин при часовом cron) снимаем и запускаем заново.
+MAX_RUNTIME_SEC=$((50 * 60))
+
 if docker ps \
      --filter "name=${CONTAINER_NAME}" \
      --filter "status=running" \
      --format '{{.Names}}' | grep -q "${CONTAINER_NAME}"; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Worker is already running, skipping."
-  exit 0
+  started_at=$(docker inspect -f '{{.State.StartedAt}}' "${CONTAINER_NAME}")
+  started_epoch=$(date -d "${started_at}" +%s)
+  age_sec=$(( $(date +%s) - started_epoch ))
+  if [ "${age_sec}" -lt "${MAX_RUNTIME_SEC}" ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Worker is already running (${age_sec}s), skipping."
+    exit 0
+  fi
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Worker stuck for ${age_sec}s, removing stale container."
+  docker rm -f "${CONTAINER_NAME}"
 fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Pulling ${IMAGE}..."

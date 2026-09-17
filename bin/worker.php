@@ -37,7 +37,7 @@ try {
 
     $logger = new FileLogger($config->logFile, $config->logLevel);
     $db = new Db($config);
-    $http        = new Client();
+    $http        = new Client(['timeout' => 30, 'connect_timeout' => 10]);
     $oauthClient = new OAuthClient($http, $config->oauthTokenUrl);
     $apiClient   = new AvitoApiClient($http, $config->avitoBaseUrl);
 
